@@ -1,0 +1,32 @@
+#Project Flow create a folder in system for project ...
+
+->Initialize git // if want
+
+-> create a virtusl environment -----------> python -m venv env
+
+-> Activate tha environment ------------> env\Scripts\activate
+
+-> Add a .gitignore file and write there .env
+
+-> create a requirement.txt file Here list all required dependencies
+      asgiref  Django  django-cors-headers  djangorestframework  djangorestframework-simplejwt  PyJWTpytz
+      sqlparse  psycopg2-binary  python-dotenv
+
+  will add more when required
+
+-> install all dependencies of requirement.txt file -------------> pip install -r requirement.txt
+
+-> creates a new Django project named "backend" -------------> django-admin startproject backend
+
+-> cd to backend
+
+
+-> create a new Django app using the startapp command, ------------->python manage.py startapp AIResumeAnalyzerApi
+
+-> copy my settings.py and replace to existing one  as configured settings for .....installed  packages......
+
+-------------------------------------------------------------------
+   1st commit
+-------------------------------------------------------------------
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
