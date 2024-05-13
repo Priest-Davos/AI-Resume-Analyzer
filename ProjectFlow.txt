@@ -36,3 +36,261 @@ copy settings.py (copy the code which i wrote in b/w --------- line )
 ------------------------------------
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+create a auth api app 
+      ->  python manage.py startapp authAPI          (in terminal)    
+
+include it in INSTALLED_APPS in settings.py
+
+_________________________________________________________________
+____________ work on JWT Authentication _________________________
+_________________________________________________________________
+
+-> Jwt token
+
+Step 1: Install Django REST Framework and Django REST Framework-JWT
+Alredy done as included in requirement.txt so dont install again
+          code:
+          pip install djangorestframework
+          pip install djangorestframework_simplejwt
+
+Step 2: Update settings.py      
+        As Already copied mine settings.py so leave it 
+
+Step 3: Create User Models
+    If you're using Django's built-in User model, you’re all set.
+    else If you need a custom user model, define it in models.py and set it as the default user model in settings.py. 
+
+    Here, I'll use the default User model.
+
+Step 4: User Serializer
+  Create a serializer for user registration and PasswordReset
+    create serializers.py file in authAPI folder
+      code:-
+            from django.contrib.auth.models import User  # Import the User model from Django's authentication system
+            from rest_framework import serializers  # Import serializers from Django REST Framework
+            from django.contrib.auth.password_validation import validate_password
+
+            class UserSerializer(serializers.ModelSerializer):  # Define a serializer for the User model
+                class Meta:  # Meta class to specify metadata options
+                    model = User  # Specify the User model for the serializer
+                    fields = ["id", "username" ,"email",  "password"]  # Specify the fields to include in the serialized representation
+                    extra_kwargs = {"password": {"write_only": True}}  # Specify additional options for the password field
+                
+                def validate_password(self, value):
+                    # Validate password using Django's built-in password validators
+                    validate_password(value)
+                    return value
+
+                def create(self, validated_data):  # Method to create a new user
+                    # Create a new user instance using the validated data
+                    user = User.objects.create_user(**validated_data)
+                    return user  # Return the newly created user instance
+            
+            class PasswordResetSerializer(serializers.Serializer):
+                email = serializers.EmailField()
+
+Step 5: Create Authentication Views 
+__________________________________________
+CreateUserView
+ This view handles the creation of user accounts. It inherits from generics.CreateAPIView, which provides the necessary functionality for creating objects in a RESTful API.
+ 
+ * queryset: Specifies the queryset used to retrieve objects. In this case, it retrieves all User objects.
+ * serializer_class: Specifies the serializer class used to serialize/deserialize data. Here, it's set to UserSerializer.
+ * permission_classes: Specifies the permission classes required to access this view. In this case, it allows any user to create an account (AllowAny).
+________________________
+PasswordResetRequestView
+This view handles the request for resetting a user's password.
+
+*serializer_class: Specifies the serializer class used to validate the request data. It's set to PasswordResetSerializer.
+*permission_classes: Specifies the permission classes required to access this view. It allows any user to request a password reset.
+
+  post method:
+ * Validates the incoming data using the serializer.
+ * Retrieves the email address from the validated data.
+ * Tries to find a user with the provided email address.
+ * If the user exists, generates a unique URL for password reset confirmation using reverse.
+ * Sends a password reset email to the user's email address using send_mail.
+ * Returns a response with the reset URL if the email is sent successfully.
+_______________________________________
+PasswordResetConfirmAPIView
+This view handles the confirmation of the password reset by processing the token and setting a new password for the user.
+
+  post method:
+ * Retrieves the email, token, and new password from the request data.
+ * Decodes the email to get the user's primary key (UID).
+ * Retrieves the user object using the UID.
+ * Verifies the token's validity using default_token_generator.check_token.
+ * If the token is valid, sets the user's password to the new password.
+ * Returns a success message if the password reset is successful.
+ * This code provides the backend logic for password reset functionality in a Django REST Framework API. It integrates with Django's authentication system and uses tokens for password reset security. Ensure that appropriate configurations are made in your Django project, including email backend setup and URL routing, to make this functionality work effectively.
+
+👉Note :-Currently there is smtp  authentication error as need to set the credential for my account
+          so password reset functionality not working ❌
+          will work in future
+    code:-      
+
+         from django.contrib.auth.models import User
+         from .serializers import UserSerializer,PasswordResetSerializer
+         from rest_framework import generics , status
+         from rest_framework.views import APIView
+         from rest_framework.permissions import IsAuthenticated, AllowAny  # Import permission classes from Django REST Framew
+         from django.contrib.auth.tokens import default_token_generator
+         from django.utils.encoding import smart_bytes , smart_str
+         from django.utils.http import urlsafe_base64_encode,urlsafe_base64_decode
+         from django.urls import reverse
+         from rest_framework.response import Response
+         from django.core.mail import send_mail
+         
+         
+         class CreateUserView(generics.CreateAPIView):
+             queryset = User.objects.all()
+             serializer_class = UserSerializer
+             permission_classes = [AllowAny]
+         
+          # View to handle password reset request.
+         class PasswordResetRequestView(generics.GenericAPIView):
+         
+             # Serializer class for handling password reset request data
+             serializer_class = PasswordResetSerializer
+             permission_classes = [AllowAny]
+             def post(self, request):
+                 """
+                 Handle POST requests for password reset.
+         
+                 :param request: HTTP request object
+                 :return: HTTP response with reset URL or validation errors
+                 """
+         
+                 # Initialize serializer with request data
+                 serializer = self.serializer_class(data=request.data)
+         
+                 # Validate serializer data
+                 if serializer.is_valid():
+                     # Extract email address from validated data
+                     email = serializer.validated_data['email']
+         
+                     try:
+                         # Retrieve user object associated with the email address
+                         user = User.objects.get(email=email)
+                     except User.DoesNotExist:
+                         # If user does not exist, return error response
+                         return Response({"error": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+         
+                     # Generate unique URL for password reset confirmation page
+                     uid = urlsafe_base64_encode(smart_bytes(user.pk))
+                     token = default_token_generator.make_token(user)
+                     reset_url = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+         
+                     # Here you would typically send the password reset email to the user's email address
+                     subject = 'Password Reset'
+                     message = f'Click the following link to reset your password: {reset_url}'
+                     from_email = 'priestdavos1@gmail.com'
+                     to_email = [email]
+                     send_mail(subject, message, from_email, to_email)
+         
+                     # Return response with reset URL
+                     return Response({"reset_url": reset_url}, status=status.HTTP_200_OK)
+         
+                 # If serializer data is invalid, return validation errors
+                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+         
+         
+         class PasswordResetConfirmAPIView(APIView):
+             def post(self, request):
+                 email = request.data.get('email')
+                 token = request.data.get('token')
+                 new_password = request.data.get('new_password')
+         
+                 # Decode email to get user object
+                 uid = smart_str(urlsafe_base64_decode(email))
+                 try:
+                     user = User.objects.get(pk=uid)
+                 except User.DoesNotExist:
+                     return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+         
+                 # Verify token
+                 if default_token_generator.check_token(user, token):
+                     # Token is valid, update user's password
+                     user.set_password(new_password)
+                     user.save()
+                     return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+                 else:
+                     return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+
+step 6 : update settings.py for email
+    Configuring SMTP Settings:-
+      code : Add these lines in settings.py
+         # Load environment variables from .env file
+         load_dotenv()
+
+         # Email Configuration
+         EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend"
+         EMAIL_HOST = 'smtp.gmail.com'
+
+         EMAIL_PORT = 587
+         EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+         EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+         DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+         EMAIL_USE_TLS = True
+
+👉Note :- Create a .env file and add thes vilds there as hardcode good 
+         EMAIL_USER = 'your_email@example.com'  # Your email address
+         EMAIL_HOST_USER = 'your_email@example.com'  # Your email address (usually the same as EMAIL_USER for Gmail)
+         EMAIL_HOST_PASSWORD = 'your_email_password'  # Your email account password or app password
+         DEFAULT_FROM_EMAIL = 'your_email@example.com'  # The default email address from which emails will be sent
+
+    Once you've configured the email settings, Django uses the specified email backend to send out emails when triggered by your application. For example, when a user requests a password reset, Django sends a password reset email to the user's email address using the configured email backend.
+    The configured email backend handles the delivery of emails according to the specified SMTP settings. It establishes a connection with the SMTP server, authenticates with the provided credentials, and sends the email to the recipient's email address.
+
+
+Step 6: URL Configuration
+ Goto urls.py in backend asnd work here
+             code:-
+                  from django.contrib import admin
+                  from django.urls import path, include
+                  urlpatterns = [
+                      path('admin/', admin.site.urls),  # Map the URL '/admin/' to the Django admin interface
+                      path("api-auth/", include("rest_framework.urls")),  # Include the Django REST Framework's authentication URLs
+                      path("api/auth/",include("authAPI.urls")), #By including "api.urls", you're telling Django to include all URL patterns defined in the urls.py file of your api app.
+                  ]
+  Goto urls.py in authAPI to setup auth endpoints
+      code :-
+         # urls.py
+         from django.urls import path
+         from .views import CreateUserView, PasswordResetRequestView, PasswordResetConfirmAPIView
+         from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView # Import views for JWT token management
+         
+         urlpatterns = [
+         
+             path("user/register/", CreateUserView.as_view(), name="register"),  # Map the URL '/api/user/register/' to the CreateUserView for user registration
+             path("token/", TokenObtainPairView.as_view(), name="get_token"),  # Map the URL '/api/token/' to the TokenObtainPairView for obtaining JWT tokens
+             path("token/refresh/", TokenRefreshView.as_view(), name="refresh"),  # Map the URL '/api/token/refresh/' to the TokenRefreshView for refreshing JWT tokens
+         
+             # URL pattern for password reset request
+             path('password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+         
+             # URL pattern for password reset confirmation
+             path('password-reset-confirm/<str:uidb64>/<str:token>/', PasswordResetConfirmAPIView.as_view(), name='password_reset_confirm'),
+         ]
+
+->Now make migration to save the changes of database
+ In terminal :-
+  pythom  manage.py makemigrations
+  pythom manage.py migrate
+
+_______________________________________
+to test run server
+got to http://127.0.0.1:8000/api/auth/user/register/ # to register a user
+got to http://127.0.0.1:8000/api/auth/token/ # to generate token for registered user
+got to http://127.0.0.1:8000/api/auth/token/refresh/ # to get refresh token token for registered user
+
+_________________________________________________________________
+so now we have->
+ user register  ✅
+ password reset❌ not work currently
+ jwt token ✅
+
+-------------------------------------------------------------------
+✔️3rd commit
+-------------------------------------------------------------------
+

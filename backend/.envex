@@ -1,0 +1,4 @@
+EMAIL_USER = 'your_email@example.com'  # Your email address
+EMAIL_HOST_USER = 'your_email@example.com'  # Your email address (usually the same as EMAIL_USER for Gmail)
+EMAIL_HOST_PASSWORD = 'your_email_password'  # Your email account password or app password
+DEFAULT_FROM_EMAIL = 'your_email@example.com'  # The default email address from which emails will be sent

@@ -1,1 +1,6 @@
 env
+
+# auth credential
+.env
+# databaes
+db.sqlite3
