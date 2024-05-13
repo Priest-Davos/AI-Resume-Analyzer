@@ -293,4 +293,101 @@ so now we have->
 -------------------------------------------------------------------
 ✔️3rd commit
 -------------------------------------------------------------------
+👉Note :-create branch v1_authApi from main  (so it is the version 1)
+          create branch v2_ResumeApi from v1_authApi
 
+Lets work here 
+create models for ResumeUpload ,  Resume ,AnalysisResult
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class ResumeUpload(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    file = models.FileField(upload_to='uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Uploaded by {self.user.username} at {self.uploaded_at}"
+
+class Resume(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    upload = models.ForeignKey(ResumeUpload, on_delete=models.CASCADE)
+    # Additional fields
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    experience = models.PositiveIntegerField(default=0)
+    skills = models.TextField(blank=True, null=True)
+    education = models.TextField(blank=True, null=True)
+    summary = models.TextField(blank=True, null=True)
+    score = models.FloatField(default=0)
+    
+    def __str__(self):
+        return f"Resume for {self.name} uploaded by {self.user.username}"
+
+class AnalysisResult(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    resume = models.ForeignKey(Resume, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    result_text = models.TextField(blank=True, null=True)
+    score = models.FloatField(default=0)
+
+    def __str__(self):
+        return f"Analysis result for {self.resume.name} by {self.user.username} created at {self.created_at}"
+
+
+Table example For visualization
+
+Table: resume_upload
++----+---------+----------------------+---------------------+
+| id | user_id |        file          |     uploaded_at     |
++----+---------+----------------------+---------------------+
+|  1 |    1    | resume1.pdf          | 2024-05-17 08:30:00 |
+|  2 |    2    | resume2.docx         | 2024-05-17 09:15:00 |
+|  3 |    1    | resume3.pdf          | 2024-05-18 10:00:00 |
++----+---------+----------------------+---------------------+
+
+Table: resume
++----+---------+-----------+-----------+---------------+------------+-----------+------------+--------+-------+
+| id | user_id | upload_id |   name    |     email     | phone_number | experience |   skills   | education | score |
++----+---------+-----------+-----------+---------------+--------------+------------+------------+-----------+-------+
+|  1 |    1    |     1     | John Doe  | john@example.com | 1234567890 |     5      | Python, SQL|   MS CS   |  4.5  |
+|  2 |    2    |     2     | Jane Smith| jane@example.com | 9876543210 |     3      | Java, HTML |   BS CS   |  4.2  |
+|  3 |    1    |     3     | Alice Lee | alice@example.com| NULL         |     7      | C++, Python|   PhD CS  |  4.8  |
++----+---------+-----------+-----------+---------------+--------------+------------+------------+-----------+-------+
+
+Table: analysis_result
++----+---------+-----------+---------------------+----------------------+-------+
+| id | user_id | resume_id |     created_at      |      result_text     | score |
++----+---------+-----------+---------------------+----------------------+-------+
+|  1 |    1    |     1     | 2024-05-17 09:00:00 | Excellent candidate! |  4.8  |
+|  2 |    2    |     2     | 2024-05-17 10:30:00 | Great skills!        |  4.5  |
+|  3 |    1    |     3     | 2024-05-18 11:45:00 | Impressive resume!   |  4.9  |
++----+---------+-----------+---------------------+----------------------+-------+
+
+Goal :-a user can upload a folder containing many files, where each file represents a resume. Additionally, each resume can have its own analysis result.
+
+ResumeUpload: This model represents the upload of a folder containing multiple files. Each ResumeUpload instance is associated with a user (ForeignKey(User)) and has a file field to store the uploaded file or folder. The uploaded_at field indicates when the upload occurred.
+
+Resume: This model represents an individual resume extracted from the uploaded folder. Each Resume instance is associated with a user (ForeignKey(User)) and linked to the corresponding ResumeUpload instance using a foreign key (ForeignKey(ResumeUpload)). The model includes additional fields such as name, email, phone number, experience, skills, education, summary, and score to store information extracted from the resume.
+
+AnalysisResult: This model represents the analysis result generated for each resume. Each AnalysisResult instance is associated with a user (ForeignKey(User)) and linked to the corresponding Resume instance using a foreign key (ForeignKey(Resume)). The model includes fields for the analysis result text, the creation timestamp (created_at), and the score.
+
+Now run makemigrations
+->python manage.py makemigrations
+
+output :- Migrations for 'AIResumeAnalyzerApi':
+            AIResumeAnalyzerApi\migrations\0001_initial.py
+              - Create model Resume
+              - Create model AnalysisResult
+              - Create model ResumeUpload
+              - Add field upload to resume
+
+->python manage.py migrate 
+
+-------------------------------------------------------------------------------------------
+✔️commit -4 , 1st on v2 branch
+--------------------------------------------------------------------------
+Now Lets create a basic serializer  for it 
