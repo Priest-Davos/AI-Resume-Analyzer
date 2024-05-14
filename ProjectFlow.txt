@@ -391,3 +391,47 @@ output :- Migrations for 'AIResumeAnalyzerApi':
 ✔️commit -4 , 1st on v2 branch
 --------------------------------------------------------------------------
 Now Lets create a basic serializer  for it 
+
+create a serializers.py file in AIResumeAnalyzerApi
+
+    code :-
+        from rest_framework import serializers
+        from .models import ResumeUpload, Resume, AnalysisResult
+        class ResumeUploadSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = ResumeUpload
+                fields = ['id', 'user', 'file', 'uploaded_at']
+        class ResumeSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = Resume
+                fields = ['id', 'user', 'upload', 'name', 'email', 'phone_number', 'experience', 'skills', 'education', 'summary', 'score']
+        class AnalysisResultSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = AnalysisResult
+                fields = ['id', 'user', 'resume', 'created_at', 'result_text', 'score']
+--------------------------------------------------------------------------------------------------
+create a superuser to test the model from admin page
+in terminal :- python manage.py createsuperuser
+             Username :-
+             password :-
+in admin.py
+ register each model with the admin site
+    code :-
+        from django.contrib import admin
+        from .models import ResumeUpload, Resume, AnalysisResult
+
+        # Register your models with the admin site
+        admin.site.register(ResumeUpload)
+        admin.site.register(Resume)
+        admin.site.register(AnalysisResult)
+
+test the model by uploading file trough admin interface
+--------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------
+✔️commit -5 , 2nd on v2 branch
+--------------------------------------------------------------------------
+
+Now lets create views for it
+create a views.py file in AIResumeAnalyzerApi
+
